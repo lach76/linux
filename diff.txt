@@ -1,0 +1,219 @@
+diff --git a/arch/arm64/boot/dts/meson64_odroidc2.dts b/arch/arm64/boot/dts/meson64_odroidc2.dts
+index 1dbbefd..a1949d3 100755
+--- a/arch/arm64/boot/dts/meson64_odroidc2.dts
++++ b/arch/arm64/boot/dts/meson64_odroidc2.dts
+@@ -554,7 +554,7 @@
+                         "usb0_to_ddr";
+ 	};
+ 
+-	i2s_dai: I2S {
++	i2s_dai: I2S-DAI {
+                 compatible = "amlogic, aml-i2s-dai";
+                 #sound-dai-cells = <0>;
+                 resets = <&clock GCLK_IDX_AIU_AI_TOP_GLUE
+@@ -640,21 +640,21 @@
+ 		status = "okay";
+ 	};
+ 
+-	odroid_hdmi {
+-		compatible = "sound_card, odroid_hdmi";
+-		status = "okay";
+-		aml-sound-card,format = "i2s";
+-		aml_sound_card,name = "ODROID-HDMI";
+-		cpu_list = <&i2sdai0>;
+-		codec_list = <&dit0>;
+-		plat_list = <&i2s_plat>;
+-		i2sdai0: i2sdai0 {
+-			sound-dai = <&i2s_dai>;
+-		};
+-		dit0: dit0 {
+-			sound-dai = <&spdif_codec>;
+-		};
+-	};
++	//odroid_hdmi {
++	//	compatible = "sound_card, odroid_hdmi";
++	//	status = "okay";
++	//	aml-sound-card,format = "i2s";
++	//	aml_sound_card,name = "ODROID-HDMI";
++	//	cpu_list = <&i2sdai0>;
++	//	codec_list = <&dit0>;
++	//	plat_list = <&i2s_plat>;
++	//	i2sdai0: i2sdai0 {
++	//		sound-dai = <&i2s_dai>;
++	//	};
++	//	dit0: dit0 {
++	//		sound-dai = <&spdif_codec>;
++	//	};
++	//};
+ 	odroid_dac {
+ 		compatible = "sound_card, odroid_dac";
+ 		status = "okay";
+@@ -680,6 +680,15 @@
+ 		pinctrl-0 = <&audio_pins>;
+ 		status = "okay";
+ 	};
++
++	//wm8750: wm8750 {
++	//	compatible  = "wlf,wm8750";
++	//}
++//
++	//sound {
++	//	compatible = "wlf,wm8750";
++	//	wlf,audio-codec = <&wm8750>;
++	//}
+ 	/* END OF AUDIO board specific */
+ 
+ 	aml_sensor0: aml-sensor@0 {
+@@ -847,12 +856,18 @@
+ 	status = "okay";
+ 
+ 	/* Hardkernel I2C RTC */
++	/*
+ 	pcf8563: pcf8563@51	{
+ 		status = "disabled";
+ 		compatible = "nxp,pcf8563";
+ 		reg = <0x51>;
+ 		#clock-cells = <0>;
+ 	};
++	*/
++	codec: wm8750@1a {
++		compatible = "wlf,wm8750";
++		reg = <0x1a>;
++	};
+ };
+ 
+ &i2c_b {
+@@ -860,21 +875,21 @@
+ 
+ 	/* Hardkernel I2C 3.5" Touchscreen */
+ 	/* drivers/input/sx865x.c */
++	/*
+ 	sx865x: sx865x@49	{
+ 		status = "okay";
+ 		compatible = "semtech,sx8650";
+ 		reg = <0x49>;
+ 		#clock-cells = <0>;
+ 
+-		/* H/W Pin control setup */
+ 		gpio-pendown = <&gpio GPIOY_7 0>;
+ 		gpio-reset   = <&gpio GPIOY_13 0 >;
+ 
+-		/* platform data setup */
+ 		invert-x = <0>;
+ 		invert-y = <1>;
+ 		swap-xy = <1>;
+ 	};
++	*/
+ };
+ 
+ &pinmux {
+diff --git a/sound/soc/aml/m8/Makefile b/sound/soc/aml/m8/Makefile
+index e7310ed..0f6a284 100644
+--- a/sound/soc/aml/m8/Makefile
++++ b/sound/soc/aml/m8/Makefile
+@@ -28,7 +28,8 @@ obj-$(CONFIG_SND_AML_M8) += snd-soc-aml-m8.o
+ snd-soc-odroid-hdmi-objs := odroid_hdmi.o
+ snd-soc-odroid-dac-objs := odroid_dac.o
+ snd-soc-odroid-dac2-objs := odroid_dac2.o
+-obj-$(CONFIG_SND_ODROID_HDMI) += snd-soc-odroid-hdmi.o
++snd-soc-odroid-wm8750-objs := aml_m8_wm8750.o
++#obj-$(CONFIG_SND_ODROID_HDMI) += snd-soc-odroid-hdmi.o
+ obj-$(CONFIG_SND_ODROID_DAC) += snd-soc-odroid-dac.o
+ obj-$(CONFIG_SND_ODROID_DAC2) += snd-soc-odroid-dac2.o
+ 
+diff --git a/sound/soc/aml/m8/odroid_dac2.c b/sound/soc/aml/m8/odroid_dac2.c
+index 6c2f87d..e63a4ee 100644
+--- a/sound/soc/aml/m8/odroid_dac2.c
++++ b/sound/soc/aml/m8/odroid_dac2.c
+@@ -54,17 +54,17 @@ static bool digital_gain_0db_limit = true;
+ 
+ static int odroid_dac2_init(struct snd_soc_pcm_runtime *rtd)
+ {
+-	if (digital_gain_0db_limit) {
+-		int ret;
+-		struct snd_soc_card *card = rtd->card;
+-		struct snd_soc_codec *codec = rtd->codec;
+-
+-		ret = snd_soc_limit_volume(codec,
+-				"Digital Playback Volume", 207);
+-		if (ret < 0)
+-			dev_warn(card->dev,
+-				"Failed to set volume limit: %d\n", ret);
+-	}
++	struct snd_soc_codec *codec = rtd->codec;
++	struct snd_soc_dapm_context *dapm = &codec->dapm;
++
++	/* These endpoints are not being used. */
++	snd_soc_dapm_nc_pin(dapm, "LINPUT2");
++	snd_soc_dapm_nc_pin(dapm, "RINPUT2");
++	snd_soc_dapm_nc_pin(dapm, "LINPUT3");
++	snd_soc_dapm_nc_pin(dapm, "RINPUT3");
++	snd_soc_dapm_nc_pin(dapm, "OUT3");
++	snd_soc_dapm_nc_pin(dapm, "MONO1");
++
+ 	return 0;
+ }
+ 
+@@ -91,6 +91,10 @@ static int dac2_hw_params(struct snd_pcm_substream *substream,
+ 	/* set cpu DAI clock */
+ 	ret = snd_soc_dai_set_sysclk(
+ 			cpu_dai, 0, params_rate(params)*256, SND_SOC_CLOCK_OUT);
++	//ret = snd_soc_dai_set_sysclk(
++	//		cpu_dai, 0, params_rate(params)*256, SND_SOC_CLOCK_IN);
++	ret = snd_soc_dai_set_sysclk(
++			codec_dai, 0, params_rate(params)*256, SND_SOC_CLOCK_IN);
+ 	if (ret < 0)
+ 		return ret;
+ 	return 0;
+@@ -115,12 +119,14 @@ static int dac2_set_bias_level(struct snd_soc_card *card,
+ }
+ static struct snd_soc_dai_link dac2_dai_link[] = {
+ 	{
+-		.name = "SND_PCM5242",
+-		.stream_name = "I2S",
+-		.cpu_dai_name = "I2S",
++		.name = "SND_WM8750",
++		.stream_name = "WM8750",
++		.cpu_dai_name = "I2S-DAI",
+ 		.platform_name = "i2s_platform",
+-		.codec_name = "pcm512x.1-004c",
+-		.codec_dai_name = "pcm512x-hifi",
++	    .codec_dai_name = "wm8750-hifi",
++    	.codec_name = "wm8750.1-001a",
++		//.codec_name = "pcm512x.1-004c",
++		//.codec_dai_name = "pcm512x-hifi",
+ 		.ops = &odroid_ops,
+ 		.init = odroid_dac2_init,
+ 	},
+diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
+index 8400601..a17af83 100644
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -226,6 +226,7 @@ obj-$(CONFIG_SND_SOC_WM8728)	+= snd-soc-wm8728.o
+ obj-$(CONFIG_SND_SOC_WM8731)	+= snd-soc-wm8731.o
+ obj-$(CONFIG_SND_SOC_WM8737)	+= snd-soc-wm8737.o
+ obj-$(CONFIG_SND_SOC_WM8741)	+= snd-soc-wm8741.o
++obj-m	+= snd-soc-wm8750.o
+ obj-$(CONFIG_SND_SOC_WM8750)	+= snd-soc-wm8750.o
+ obj-$(CONFIG_SND_SOC_WM8753)	+= snd-soc-wm8753.o
+ obj-$(CONFIG_SND_SOC_WM8770)	+= snd-soc-wm8770.o
+diff --git a/sound/soc/codecs/wm8750.c b/sound/soc/codecs/wm8750.c
+index 78616a6..60ace01 100644
+--- a/sound/soc/codecs/wm8750.c
++++ b/sound/soc/codecs/wm8750.c
+@@ -505,6 +505,7 @@ static int wm8750_set_dai_sysclk(struct snd_soc_dai *codec_dai,
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+ 	struct wm8750_priv *wm8750 = snd_soc_codec_get_drvdata(codec);
+ 
++	printk("wm8750_set_dai_sysclk = %d", freq);
+ 	switch (freq) {
+ 	case 11289600:
+ 	case 12000000:
+@@ -835,6 +836,7 @@ static int wm8750_i2c_probe(struct i2c_client *i2c,
+ 	if (IS_ERR(regmap))
+ 		return PTR_ERR(regmap);
+ 
++	printk("CONFIG_I2C - wm8750_dai registered\n");
+ 	ret =  snd_soc_register_codec(&i2c->dev,
+ 			&soc_codec_dev_wm8750, &wm8750_dai, 1);
+ 	return ret;
