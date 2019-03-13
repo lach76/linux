@@ -83,20 +83,6 @@ static struct snd_soc_ops odroid_ops = {
     .hw_params = wm8750_hw_params,
 };
 
-static int wm8750_set_bias_level(struct snd_soc_card *card,
-    struct snd_soc_dapm_context *dapm, enum snd_soc_bias_level level)
-{
-    int ret = 0;
-    struct wm8750_private_data *p_dac2;
-
-    printk("wm8750 set_bias_level\n");
-    p_dac2 = snd_soc_card_get_drvdata(card);
-    if (p_dac2->bias_level == (int)level)
-        return 0;
-
-    p_dac2->bias_level = (int)level;
-    return ret;
-}
 static struct snd_soc_dai_link wm8750_dai_link[] = {
     {
         .name = "SND_WM8750",
