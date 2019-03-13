@@ -680,6 +680,14 @@
 		pinctrl-0 = <&audio_pins>;
 		status = "okay";
 	};
+
+	odroid_wm8750 {
+		compatible = "sound_card, odroid_wm8750";
+		aml,sound_card = "ODROID-WM8750";
+		pinctrl-names = "odroid_i2s";		//	aml_snd_i2s
+		pinctrl-0 = <&audio_pins>;
+		status = "okay";
+	}
 	/* END OF AUDIO board specific */
 
 	aml_sensor0: aml-sensor@0 {
@@ -846,35 +854,41 @@
 &i2c_a {
 	status = "okay";
 
-	/* Hardkernel I2C RTC */
-	pcf8563: pcf8563@51	{
-		status = "disabled";
-		compatible = "nxp,pcf8563";
-		reg = <0x51>;
-		#clock-cells = <0>;
+	//	remove HardKernel I2C RTC
+	// pcf8563: pcf8563@51	{
+	// 	status = "disabled";
+	// 	compatible = "nxp,pcf8563";
+	// 	reg = <0x51>;
+	// 	#clock-cells = <0>;
+	// };
+
+	//	add wm8750 codec
+	codec: wm8750@1a {
+		compatible = "wlf,wm8750";
+		reg = <0x1a>;
 	};
 };
 
 &i2c_b {
 	status = "okay";
 
-	/* Hardkernel I2C 3.5" Touchscreen */
+	//	remove HardKernel I2C 3.5" TouchScreen
 	/* drivers/input/sx865x.c */
-	sx865x: sx865x@49	{
-		status = "okay";
-		compatible = "semtech,sx8650";
-		reg = <0x49>;
-		#clock-cells = <0>;
-
-		/* H/W Pin control setup */
-		gpio-pendown = <&gpio GPIOY_7 0>;
-		gpio-reset   = <&gpio GPIOY_13 0 >;
-
-		/* platform data setup */
-		invert-x = <0>;
-		invert-y = <1>;
-		swap-xy = <1>;
-	};
+	//	sx865x: sx865x@49	{
+	//		status = "okay";
+	//		compatible = "semtech,sx8650";
+	//		reg = <0x49>;
+	//		#clock-cells = <0>;
+//	
+	//		/* H/W Pin control setup */
+	//		gpio-pendown = <&gpio GPIOY_7 0>;
+	//		gpio-reset   = <&gpio GPIOY_13 0 >;
+//	
+	//		/* platform data setup */
+	//		invert-x = <0>;
+	//		invert-y = <1>;
+	//		swap-xy = <1>;
+	//	};
 };
 
 &pinmux {
@@ -884,14 +898,17 @@
                 amlogic,pins = "GPIOAO_8",
                         "GPIOAO_9",
                         "GPIOAO_10",
-                        "GPIOAO_11";
+                        "GPIOAO_11",
+												//	SPDIF_OUT GPIOA0_6 --> LINE-IN
+												"GPIOA0_6";
         };
 
-        audio_spdif_pins:audio_pin1{
-                amlogic,setmask = <AO 0x10000>;
-                amlogic,clrmask = <AO 0x40000>;
-                amlogic,pins = "GPIOAO_6";
-        };
+				//	WM8750, SPDIF/Out --> Line In으로 동작
+        //	audio_spdif_pins:audio_pin1{
+        //	        amlogic,setmask = <AO 0x10000>;
+        //	        amlogic,clrmask = <AO 0x40000>;
+        //	        amlogic,pins = "GPIOAO_6";
+        //	};
 
         led_pins: led_pin {
                 amlogic,setmask = <AO 0x00000>;

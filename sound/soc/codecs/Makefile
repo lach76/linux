@@ -226,7 +226,9 @@ obj-$(CONFIG_SND_SOC_WM8728)	+= snd-soc-wm8728.o
 obj-$(CONFIG_SND_SOC_WM8731)	+= snd-soc-wm8731.o
 obj-$(CONFIG_SND_SOC_WM8737)	+= snd-soc-wm8737.o
 obj-$(CONFIG_SND_SOC_WM8741)	+= snd-soc-wm8741.o
-obj-$(CONFIG_SND_SOC_WM8750)	+= snd-soc-wm8750.o
+# forced enable wm8750 codec
+obj-m	+= snd-soc-wm8750.o
+#obj-$(CONFIG_SND_SOC_WM8750)	+= snd-soc-wm8750.o
 obj-$(CONFIG_SND_SOC_WM8753)	+= snd-soc-wm8753.o
 obj-$(CONFIG_SND_SOC_WM8770)	+= snd-soc-wm8770.o
 obj-$(CONFIG_SND_SOC_WM8776)	+= snd-soc-wm8776.o
